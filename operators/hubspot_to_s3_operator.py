@@ -2,7 +2,7 @@ from airflow.utils.decorators import apply_defaults
 
 from airflow.models import BaseOperator, Variable, SkipMixin
 from airflow.hooks import S3Hook
-from HubspotPlugin.hooks.hubspot_hook import HubspotHook
+from hubspot_plugin.hooks.hubspot_hook import HubspotHook
 
 from flatten_json import flatten
 from os import path
