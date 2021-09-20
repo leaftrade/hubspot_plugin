@@ -10,7 +10,36 @@ import datetime
 import logging
 import json
 import time
-import boa
+import re
+
+
+spaces_re = re.compile(r'[\s\-]+')
+strip_re = re.compile(r'[^\w]+')
+first_cap_re = re.compile(r'(.)([A-Z][a-z]+)')
+all_cap_re = re.compile(r'([a-z0-9])([A-Z])')
+dedupe_re = re.compile(r'\_+')
+
+
+def constrict(string):
+    """Convert the input string to snakecase + lowercase."""
+
+    if string is None:
+        return ''
+
+    # Whitespace to underscores
+    output = spaces_re.sub('_', string)
+
+    # Strip non-alphanumeric/underscore chars
+    output = strip_re.sub('', output)
+
+    # Snake case
+    output = first_cap_re.sub(r'\1_\2', output)
+    output = all_cap_re.sub(r'\1_\2', output).lower()
+
+    # Remove multiple sequential underscores
+    output = dedupe_re.sub('_', output)
+
+    return output
 
 
 class HubspotToS3Operator(BaseOperator, SkipMixin):
@@ -188,7 +217,7 @@ class HubspotToS3Operator(BaseOperator, SkipMixin):
             logging.info('Logging {0} to S3...'.format(key))
 
             output = [flatten(e) for e in output]
-            output = '\n'.join([json.dumps({boa.constrict(k): v
+            output = '\n'.join([json.dumps({constrict(k): v
                                for k, v in i.items()}) for i in output])
 
             s3 = S3Hook(self.s3_conn_id)
@@ -355,7 +384,7 @@ class HubspotToS3Operator(BaseOperator, SkipMixin):
                                                                    self.split[1])
                                 else:
                                     key = '{0}_{1}_{2}{3}'.format(self.split[0],
-                                                                  boa.constrict(k),
+                                                                  constrict(k),
                                                                   str(n),
                                                                   self.split[1])
                                 logging.info('Sending to Output Manager...')
