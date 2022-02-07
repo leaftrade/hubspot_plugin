@@ -1,7 +1,5 @@
-from airflow.utils.decorators import apply_defaults
-
 from airflow.models import BaseOperator, Variable, SkipMixin
-from airflow.hooks import S3Hook
+
 from hubspot_plugin.hooks.hubspot_hook import HubspotHook
 
 from flatten_json import flatten
@@ -94,7 +92,6 @@ class HubspotToS3Operator(BaseOperator, SkipMixin):
     template_fields = ('s3_key',
                        'hubspot_args',)
 
-    @apply_defaults
     def __init__(self,
                  hubspot_conn_id,
                  hubspot_object,
@@ -200,6 +197,8 @@ class HubspotToS3Operator(BaseOperator, SkipMixin):
             logging.info('Total Output File Count: ' + str(self.total_output_files))
 
     def outputManager(self, context, output, key, bucket):
+        from airflow.providers.amazon.aws.hooks import s3
+
         if len(output) == 0 or output is None:
             if self.total_output_files == 0:
                 logging.info("No records pulled from Hubspot.")
@@ -220,14 +219,14 @@ class HubspotToS3Operator(BaseOperator, SkipMixin):
             output = '\n'.join([json.dumps({constrict(k): v
                                for k, v in i.items()}) for i in output])
 
-            s3 = S3Hook(self.s3_conn_id)
-            s3.load_string(
+            s3hook = s3.S3Hook(self.s3_conn_id)
+            s3hook.load_string(
                 string_data=str(output),
                 key=key,
                 bucket_name=bucket,
                 replace=True
             )
-            s3.connection.close()
+            s3hook.connection.close()
 
             self.total_output_files += 1
 
